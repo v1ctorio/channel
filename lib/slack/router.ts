@@ -3,7 +3,7 @@ import { cloneRawRequest } from "hono/request"
 import { createHmac } from "node:crypto";
 import { safeCompare, SlackEventRes } from "./utils.ts";
 import { replyInteractionEphemeral, unfurlById } from './methods.ts';
-import config from '../../channel.config.ts'
+import config from '../../joinchannel.config.json' with { type: 'json' }
 
 export const slack = new Hono()
 

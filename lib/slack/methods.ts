@@ -1,5 +1,8 @@
 //TODO: Remove all logs and unnecessary stream reads
 
+import { BlockList } from "node:net";
+import { json, text } from "node:stream/consumers";
+
 const SLACK_XOXB_TOKEN = Deno.env.get("SLACK_XOXB_TOKEN") ?? ""
 
 const headers = {
@@ -63,6 +66,24 @@ export async function replyInteractionEphemeral(response_url: string, text: stri
         body,
         headers
     })
-    
+
     console.log(await res.json())
 }
+
+
+export async function postMessage(channel:string, content: string | object) {
+    const body = JSON.stringify({
+        blocks: typeof content == "object" ? content : undefined,
+        markdown_text: typeof content == "string" ? content : undefined,
+        channel
+    })    
+
+    const res = await fetch('https://slack.com/api/chat.postMessage', {
+        method: "POST",
+        body,
+        headers
+    })
+
+    console.log(await res.json())
+}
+

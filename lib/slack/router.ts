@@ -116,6 +116,7 @@ async function handleRequestButtonPayload(payload:BlockActionInteractionPayload)
 						"text": config["approvalMessage"]["approveButtonCaption"],
 						"emoji": true
 					},
+          "style":"primary",
 					"value": user.id,
 					"action_id": "approve"
 				},
@@ -126,6 +127,7 @@ async function handleRequestButtonPayload(payload:BlockActionInteractionPayload)
 						"text": config["approvalMessage"]["deleteButtonCaption"],
 						"emoji": true
 					},
+          "style": "danger",
 					"value": user.id,
 					"action_id": "delete"
 				}

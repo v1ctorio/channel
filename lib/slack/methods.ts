@@ -108,3 +108,35 @@ export async function inviteUser(channel:string, user: string): Promise<boolean>
   return true
 
 }
+
+export async function deleteMessage(channel:string, message_ts: string) {
+  const body = JSON.stringify({
+    channel,
+    ts: message_ts
+  })
+  const res = await fetch('https://slack.com/api/chat.delete',{
+    method: "POST",
+    body,
+    headers
+  })
+  console.log(await res.json())
+}
+// here the channel ID for some reason can't be an user id AAAAAAA
+export async function updateMessage(channel:string, message_ts:string,content: object | string) {
+
+  const body = JSON.stringify({
+    channel,
+    ts: message_ts,
+    blocks: typeof content == 'object' ? content : undefined,
+    markdown_text: typeof content == 'string' ? content : undefined
+  })
+
+  const res = await fetch('https://slack.com/api/chat.update', {
+    method: "POST",
+    body,
+    headers
+  })
+
+  console.log(await res.json())
+  
+}

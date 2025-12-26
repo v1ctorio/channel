@@ -1,4 +1,4 @@
-import config from '../env.ts'
+import config, { EnvT} from '../env.ts'
 import { Hono } from 'hono'
 import { cloneRawRequest } from "hono/request"
 import { env } from 'hono/adapter'
@@ -6,11 +6,11 @@ import { createHmac } from "node:crypto";
 import { BlockActionInteractionPayload, safeCompare, SlackEventRes } from "./utils.ts";
 import { deleteMessage, inviteUser, postMessage, unfurlById, updateMessage } from './methods.ts';
 import { stringify } from "node:querystring";
-export const slack = new Hono()
+
+const slack = new Hono()
 
 const SLACK_SINGING_SECRET = Deno.env.get("SLACK_SINGING_SECRET") ?? ""
 
-type EnvT = {SLACK_SINGING_SECRET: string, SLACK_XOXB_TOKEN: string }
 
 slack.use(async (c, next) => {
   const rawreqBody = await (await cloneRawRequest(c.req)).arrayBuffer()
@@ -195,3 +195,5 @@ async function handleDeleteButtonPayload(payload: BlockActionInteractionPayload,
 
   await deleteMessage(payload.channel.id, oldMsg.ts, xoxb)
 }
+
+export default slack;

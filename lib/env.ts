@@ -18,4 +18,7 @@ interface JoinChannelConfig {
   };
 }
 
+export type EnvT = {SLACK_SINGING_SECRET: string, SLACK_XOXB_TOKEN: string, HCA_CLIENT_ID: string, HCA_CLIENT_SECRET: string, HCA_REDIRECT_URI: string }
+
+
 export default config

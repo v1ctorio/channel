@@ -1,13 +1,16 @@
 import config from '../env.ts'
 import { Hono } from 'hono'
 import { cloneRawRequest } from "hono/request"
+import { env } from 'hono/adapter'
 import { createHmac } from "node:crypto";
 import { BlockActionInteractionPayload, safeCompare, SlackEventRes } from "./utils.ts";
 import { deleteMessage, inviteUser, postMessage, unfurlById, updateMessage } from './methods.ts';
+import { stringify } from "node:querystring";
 export const slack = new Hono()
 
 const SLACK_SINGING_SECRET = Deno.env.get("SLACK_SINGING_SECRET") ?? ""
 
+type EnvT = {SLACK_SINGING_SECRET: string, SLACK_XOXB_TOKEN: string }
 
 slack.use(async (c, next) => {
   const rawreqBody = await (await cloneRawRequest(c.req)).arrayBuffer()
@@ -47,7 +50,7 @@ slack.post("/events",async(c) => {
 
     const text = `*${config.title}*\n\n${config.body}`
 
-    unfurlById(body.event.unfurl_id, body.event.source, decodeURI(body.event.links[0].url), {mrkdwn: text, buttonCaption: config.actionButtonCaption})
+    unfurlById(body.event.unfurl_id, body.event.source, decodeURI(body.event.links[0].url), {mrkdwn: text, buttonCaption: config.actionButtonCaption}, env<EnvT>(c).SLACK_XOXB_TOKEN )
 
     return c.text('')
   }
@@ -63,17 +66,19 @@ slack.post('/interactivity', async (c) => {
   const payload = JSON.parse(body["payload"] as string)
   console.log(payload)
 
+  const XOXB = env<EnvT>(c).SLACK_XOXB_TOKEN
+
   const action_id = payload["actions"][0]["action_id"]
 
   c.status(200)
 
 //TODO. awaiting IS TOO SLOW AND SLACK GETS MAD IF YOU DON'T REPLY FAST ENOUGH but not doing so could kill the process on serverless
     if (action_id === 'the-click-button') {
-        handleRequestButtonPayload(payload)
+        handleRequestButtonPayload(payload, XOXB)
       } else if (action_id === 'approve') {
-        handleApproveButtonPayload(payload) 
+        handleApproveButtonPayload(payload, XOXB) 
       } else if (action_id === 'delete') {
-        handleDeleteButtonPayload(payload)
+        handleDeleteButtonPayload(payload, XOXB)
       }
       
 
@@ -91,7 +96,7 @@ slack.get('/', (c)=> {
 })
 
 
-async function handleRequestButtonPayload(payload:BlockActionInteractionPayload) {
+async function handleRequestButtonPayload(payload:BlockActionInteractionPayload, xoxb: string) {
       const user = payload["user"]
 
 
@@ -136,26 +141,26 @@ async function handleRequestButtonPayload(payload:BlockActionInteractionPayload)
 			]
 		}
 	];
-      await postMessage(config["approvalMessage"]["channel"], ApprovalMsgBlocks)
+      await postMessage(config["approvalMessage"]["channel"], ApprovalMsgBlocks, xoxb)
 
       if (config["confirmationMessage"]) {
-        await postMessage(user.id, config["confirmationMessage"])
+        await postMessage(user.id, config["confirmationMessage"], xoxb)
       }
 
 
 }
 
-async function handleApproveButtonPayload(payload: BlockActionInteractionPayload) {
+async function handleApproveButtonPayload(payload: BlockActionInteractionPayload, xoxb: string) {
   const user = payload.actions[0]?.value as string
 
   const oldMsg = payload.message
 
   const text = oldMsg.blocks[0].text.text
-  const succesfullyInvited = inviteUser(config.channel_id, user);
+  const succesfullyInvited = inviteUser(config.channel_id, user, xoxb);
 
 
   if (!succesfullyInvited) {
-    await postMessage(config["approvalMessage"]["channel"], 'Error inviting user. Make sure I am in the target channel.  Read the logs for the full error.')
+    await postMessage(config["approvalMessage"]["channel"], 'Error inviting user. Make sure I am in the target channel.  Read the logs for the full error.', xoxb)
     return
   }
 
@@ -180,13 +185,13 @@ async function handleApproveButtonPayload(payload: BlockActionInteractionPayload
     }
 	];
 
-  await updateMessage(payload.channel.id, oldMsg.ts, updatedBlocks)
+  await updateMessage(payload.channel.id, oldMsg.ts, updatedBlocks, xoxb)
 
 }
 
-async function handleDeleteButtonPayload(payload: BlockActionInteractionPayload) {
+async function handleDeleteButtonPayload(payload: BlockActionInteractionPayload, xoxb: string) {
   
   const oldMsg = payload.message
 
-  await deleteMessage(payload.channel.id, oldMsg.ts)
+  await deleteMessage(payload.channel.id, oldMsg.ts, xoxb)
 }

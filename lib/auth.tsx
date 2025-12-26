@@ -2,9 +2,8 @@ import { Hono } from "hono";
 import { EnvT } from "./env.ts";
 import { env } from "hono/adapter";
 import { Layout } from "./browser.tsx";
-import { resolve } from "node:path";
-import { renderToReadableStream, Suspense } from "hono/jsx/streaming";
-
+import { streamText } from 'hono/streaming'
+import config from './env.ts'
 const hono = new Hono()
 
 
@@ -26,15 +25,15 @@ hono.get("/hackclub", (c) => {
     oidc_link.searchParams.append('client_id', HCA_CLIENT_ID)
     oidc_link.searchParams.append('redirect_uri', HCA_REDIRECT_URI)
     oidc_link.searchParams.append('response_type', 'code')
-    oidc_link.searchParams.append('scope', 'openid+slack_id')
+    // yeah no oidc_link.searchParams.append('scope', 'openid\+slack_id')
 
 
-    return c.redirect(oidc_link.href)
+    return c.redirect(oidc_link.href + "&scope=openid+slack_id")
 })
 
 hono.get("/hackclub/callback", async (c) => {
 
-    const {HCA_CLIENT_ID, HCA_CLIENT_SECRET} = env<EnvT>(c)
+    const {HCA_CLIENT_ID, HCA_CLIENT_SECRET, HCA_REDIRECT_URI} = env<EnvT>(c)
 
     const code = c.req.query("code")
 
@@ -44,52 +43,93 @@ hono.get("/hackclub/callback", async (c) => {
         </Layout>)
     }
 
-    const stream = renderToReadableStream(
-        <Layout>
-            <p>Starting to do things</p>
 
-            <Suspense fallback={<p>failed</p>}>
-                <TestC text="First thing" delay={1000}/>
-            </Suspense>
-
-
-            <Suspense fallback={<></>}>
-                <TestC text={token.access_token} delay={100}/>
-            </Suspense>
-        </Layout>
-    )
-    const token = await HCACodeToToken(code, HCA_CLIENT_ID, HCA_CLIENT_SECRET)
 
 
 
 
 
     
-    return c.body(stream, {
-        headers: {
-            "Content-Type":"text/html; charset=UTF-8",
-            "Transfer-Encoding": "Chunked"
+    return streamText(c, async (stream) => {
+        await stream.writeln("Trying to retrieve oauth token...")
+        let hcatR: HCATokenRes = {} as HCATokenRes
+        try {
+
+            hcatR = (await HCACodeToToken(code, HCA_CLIENT_ID, HCA_CLIENT_SECRET, HCA_REDIRECT_URI))
+        } catch (e) {
+            console.log(e)
+            await stream.writeln("Invalid token provided. Aborting.")
+            return;
         }
+        if(!hcatR.access_token) {
+            await stream.writeln("Unable to fetch token. Aborting.")
+            return;
+        }
+        const token = hcatR.access_token
+
+        await stream.writeln("Successfully retrieved token. ")
+
+        await stream.writeln("Retrieving your slack ID...")
+
+        await stream.write("Hi there, ")
+
+        const uInfo = await HCAFetchUserInfo(token).catch(async e=> {
+            console.log(e)
+        })
+        if (!uInfo) {
+            await stream.write("<Error fetching slack ID>")
+            return
+        }
+        await stream.writeln(uInfo.slack_id)
+
+        await stream.writeln("Sending your channel join request...")
+
+        //TODO actually send the channel join request
+
+        await stream.writeln(`"${config.confirmationMessage}"`)
+
+
+        
     })
-    return c.
 })
 
 export default hono;
 
 
-async function HCACodeToToken(code:string, client_id: string, client_secret: string): Promise<HCATokenRes> {
-    const payload = {
-        client_id,
-        client_secret,
-        code,
-        grant_type: "authorization_code"
-    }
+async function HCACodeToToken(code:string, client_id: string, client_secret: string, redirect_uri: string): Promise<HCATokenRes> {
+
+    const params = new URLSearchParams()
+    params.append("client_id", client_id)
+    params.append("client_secret", client_secret)
+    params.append("redirect_uri", redirect_uri)
+    params.append("code", code)
+    params.append("grant_type", "authorization_code")   
+    
     const res = await fetch('https://auth.hackclub.com/oauth/token', {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: params.toString(),
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
     })
 
-    return await res.json()
+    const j = await res.json()
+    console.log(j)
+    return j
+}
+
+async function HCAFetchUserInfo(access_token:string): Promise<{ sub: string, slack_id: string }> {
+    const res = await fetch('https://auth.hackclub.com/oauth/userinfo', {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${access_token}`
+        }
+    })
+
+    const j = await res.json()
+    console.log(j)
+
+    return j;
 }
 
 

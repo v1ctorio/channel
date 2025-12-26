@@ -1,18 +1,36 @@
 //TODO: Remove all logs and unnecessary stream reads
 
-import { BlockList } from "node:net";
-import { json, text } from "node:stream/consumers";
-
-const SLACK_XOXB_TOKEN = Deno.env.get("SLACK_XOXB_TOKEN") ?? ""
-
-const headers = {
+const Headers = (t: string) => ({
       "Content-Type": "application/json; charset=utf-8",
-      Authorization: `Bearer ${SLACK_XOXB_TOKEN}`
+      "Authorization": `Bearer ${t}`
+})
+
+
+async function slackPOSTRequest(endpoint:string, payload: object, xoxb: string) {
+  const body = JSON.stringify(payload)
+  const headers = Headers(xoxb)
+  const URL = endpoint.startsWith("https") ? endpoint : `https://slack.com/api/${endpoint}`
+
+  const res = await fetch(URL, {
+    headers,
+    body,
+    method: "POST"
+  })
+
+  const data = await res.json()
+
+  if (!data.ok) {
+    return false
+  }
+
+  console.log(data)
+  return data
+  
 }
 
-export async function unfurlById(unfurl_id: string, source: 'conversations_history' | 'composer', urlToUnfurl: string) {
+export async function unfurlById(unfurl_id: string, source: 'conversations_history' | 'composer', urlToUnfurl: string, {mrkdwn, buttonCaption}: {buttonCaption: string, mrkdwn: string }, xoxb: string) {
   
-  const body=JSON.stringify({
+  const body={
       unfurl_id,
       source,
       user_auth_required: false,
@@ -23,7 +41,7 @@ export async function unfurlById(unfurl_id: string, source: 'conversations_histo
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Take a look at this carafe, just another cousin of glass"
+                        "text": mrkdwn
                     },
                   },
                   {
@@ -34,7 +52,7 @@ export async function unfurlById(unfurl_id: string, source: 'conversations_histo
                         "action_id": "the-click-button",
                         "text": {
                           "type": "plain_text",
-                          "text": "click"
+                          "text": buttonCaption
                         },
                         style: "primary"
                       }
@@ -43,104 +61,67 @@ export async function unfurlById(unfurl_id: string, source: 'conversations_histo
           ]
         }
       }
-    })
-    console.log(body)
-  
-  const res = await fetch('https://slack.com/api/chat.unfurl',{
-    method: "POST",
-    body,
-    headers
-  })
+    }  
+  const _res = await slackPOSTRequest('https://slack.com/api/chat.unfurl',body, xoxb)
 
-  console.log(await res.json())
 }
 
 
-export async function replyInteractionEphemeral(response_url: string, text: string) {
-    const body = JSON.stringify({
+export async function replyInteractionEphemeral(response_url: string, text: string, xoxb: string) {
+    const body = {
         text
-    })
+    }
 
-    const res = await fetch(response_url, {
-        method: "POST",
-        body,
-        headers
-    })
-
-    console.log(await res.json())
+    const _res = await slackPOSTRequest(response_url, body, xoxb)
 }
 
 
-export async function postMessage(channel:string, content: string | object): Promise<string> {
-    const body = JSON.stringify({
+export async function postMessage(channel:string, content: string | object, xoxb: string): Promise<string> {
+    const body = {
         blocks: typeof content == "object" ? content : undefined,
         markdown_text: typeof content == "string" ? content : undefined,
         channel
-    })    
+    }
 
-    const res = await fetch('https://slack.com/api/chat.postMessage', {
-        method: "POST",
-        body,
-        headers
-    })
-
-    const j = await res.json()
+    const j = await slackPOSTRequest("chat.postMessage", body, xoxb)
 
     return j["channel"] ? j["channel"] : ""
 }
 
-export async function inviteUser(channel:string, user: string): Promise<boolean> {
+export async function inviteUser(channel:string, user: string, xoxb: string): Promise<boolean> {
   console.log(`Adding ${user} to ${channel}`)
-  const body = JSON.stringify({
+  const body = {
     channel,
     users: user
-  })
-  
-
-  let res = await fetch('https://slack.com/api/conversations.invite', {
-    method: "POST",
-    body, 
-    headers
-  })
-  res = await res.json()
-
-  if (!res.ok) {
-    console.error(res)
-    return false
   }
-  return true
+  
+  const res = await slackPOSTRequest("conversations.invite", body, xoxb)
+
+  return res.ok as boolean
 
 }
 
-export async function deleteMessage(channel:string, message_ts: string) {
-  const body = JSON.stringify({
+export async function deleteMessage(channel:string, message_ts: string, xoxb: string) {
+  const body = {
     channel,
     ts: message_ts
-  })
-  const res = await fetch('https://slack.com/api/chat.delete',{
-    method: "POST",
-    body,
-    headers
-  })
-  console.log("Tried to delete ", message_ts)
-  console.log(await res.json())
-}
-// here the channel ID for some reason can't be an user id AAAAAAA
-export async function updateMessage(channel:string, message_ts:string,content: object | string) {
+  }
 
-  const body = JSON.stringify({
+  await slackPOSTRequest('chat.delete', body, xoxb)
+
+  console.log("Tried to delete ", message_ts)
+}
+// here the channel ID for some reason can't be an user id AAAAAAA // nvm ts didn't end up being that annoying
+export async function updateMessage(channel:string, message_ts:string,content: object | string, xoxb: string) {
+
+  const body = {
     channel,
     ts: message_ts,
     blocks: typeof content == 'object' ? content : undefined,
     markdown_text: typeof content == 'string' ? content : undefined
-  })
+  }
 
-  const res = await fetch('https://slack.com/api/chat.update', {
-    method: "POST",
-    body,
-    headers
-  })
+  return await slackPOSTRequest("chat.update", body, xoxb)
 
-  console.log(await res.json())
   
 }

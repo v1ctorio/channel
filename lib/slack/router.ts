@@ -45,7 +45,9 @@ slack.post("/events",async(c) => {
       return c.text(body["challenge"])
   } else if (body.type == "event_callback") {
 
-    unfurlById(body.event.unfurl_id, body.event.source, decodeURI(body.event.links[0].url))
+    const text = `*${config.title}*\n\n${config.body}`
+
+    unfurlById(body.event.unfurl_id, body.event.source, decodeURI(body.event.links[0].url), {mrkdwn: text, buttonCaption: config.actionButtonCaption})
 
     return c.text('')
   }

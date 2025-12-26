@@ -9,6 +9,7 @@ interface JoinChannelConfig {
   title: string;
   body: string;
   confirmationMessage: string;
+  actionButtonCaption: string;
   approvalMessage: {
   channel: string;
   text: string;

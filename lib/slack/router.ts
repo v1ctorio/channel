@@ -73,11 +73,11 @@ slack.post('/interactivity', async (c) => {
 
 //TODO. awaiting IS TOO SLOW AND SLACK GETS MAD IF YOU DON'T REPLY FAST ENOUGH but not doing so could kill the process on serverless
     if (action_id === 'the-click-button') {
-        handleRequestButtonPayload(payload, XOXB)
+        await handleRequestButtonPayload(payload, XOXB)
       } else if (action_id === 'approve') {
-        handleApproveButtonPayload(payload, XOXB) 
+        await handleApproveButtonPayload(payload, XOXB) 
       } else if (action_id === 'delete') {
-        handleDeleteButtonPayload(payload, XOXB)
+        await handleDeleteButtonPayload(payload, XOXB)
       }
       
 

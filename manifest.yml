@@ -1,0 +1,37 @@
+display_information:
+  name: Join the vic channel
+features:
+  bot_user:
+    display_name: Join the vic channel
+    always_online: false
+  unfurl_domains:
+    - joinmychannel.vic.wf
+oauth_config:
+  redirect_urls:
+    - /slack/redirect
+  scopes:
+    user:
+      - users.profile:read
+      - users.profile:write
+      - links:read
+      - links:write
+    bot:
+      - app_mentions:read
+      - links:read
+      - links:write
+      - groups:write.invites
+      - channels:write.invites
+      - chat:write
+settings:
+  event_subscriptions:
+    request_url: /slack/events
+    user_events:
+      - link_shared
+    bot_events:
+      - link_shared
+  interactivity:
+    is_enabled: true
+    request_url: /slack/interactivity
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

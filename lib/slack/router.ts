@@ -49,7 +49,7 @@ slack.post("/events",async(c) => {
 
     const text = `*${config.title}*\n\n${config.body}`
 
-    unfurlById(body.event.unfurl_id, body.event.source, decodeURI(body.event.links[0].url), {mrkdwn: text, buttonCaption: config.actionButtonCaption}, env<EnvT>(c).SLACK_XOXB_TOKEN )
+    await unfurlById(body.event.unfurl_id, body.event.source, decodeURI(body.event.links[0].url), {mrkdwn: text, buttonCaption: config.actionButtonCaption}, env<EnvT>(c).SLACK_XOXB_TOKEN )
 
     return c.text('')
   }

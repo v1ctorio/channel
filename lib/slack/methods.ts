@@ -20,6 +20,7 @@ async function slackPOSTRequest(endpoint:string, payload: object, xoxb: string) 
   const data = await res.json()
 
   if (!data.ok) {
+    console.errror(data)
     return false
   }
 
@@ -63,6 +64,8 @@ export async function unfurlById(unfurl_id: string, source: 'conversations_histo
       }
     }  
   const _res = await slackPOSTRequest('https://slack.com/api/chat.unfurl',body, xoxb)
+  console.info("unfurled, ", _res)
+      
 
 }
 

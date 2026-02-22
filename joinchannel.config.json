@@ -2,7 +2,7 @@
     "$IMPORTANT": "Documentation available at docs/config.md",
     "channel_id": "C07JTBZ66HF",
     "title": "Join the Vic channel",
-    "body": "Hi hello hi how you doing hi hello it is me hi.",
+    "body": "Hi hello hi how you doing hi hello it is me hi. If you don't want to click the scary oauth, just paste this website in the slack and let it embed.",
     "confirmationMessage": "hii",
     "actionButtonCaption": "Click", 
     "approvalMessage": {
